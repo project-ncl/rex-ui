@@ -1,113 +1,177 @@
-import Image from 'next/image'
+"use client";
+
+import Dagre from "dagre";
+
+import React, { useEffect, useCallback } from "react";
+import ReactFlow, {
+  ReactFlowProvider,
+  Panel,
+  useReactFlow,
+  useNodesState,
+  useEdgesState,
+  Node,
+  NodeTypes,
+  Edge,
+} from "reactflow";
+
+import "reactflow/dist/style.css";
+
+import PncNode from "./pnc_node";
+
+import configData from "./config.json";
+
+type Action = {
+  name: string;
+  dependants: string[];
+  dependencies: string[];
+  state: string;
+};
+
+type Option = {
+  direction: string;
+};
+
+const nodeTypes: NodeTypes = {
+  pncNode: PncNode,
+};
+
+const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
+
+const getLayoutedElements = (nodes: Node[], edges: Edge[], options: Option) => {
+  g.setGraph({ rankdir: options.direction });
+
+  edges.forEach((edge) => g.setEdge(edge.source, edge.target));
+  nodes.forEach((node) => g.setNode(node.id, node));
+
+  Dagre.layout(g);
+
+  return {
+    nodes: nodes.map((node) => {
+      const { x, y } = g.node(node.id);
+
+      return { ...node, position: { x, y } };
+    }),
+    edges,
+  };
+};
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const fakeData = [
+  { name: "abeeeeee", dependants: ["cdeeeeee", "efeeeeee"] },
+  { name: "cdeeeeee", dependants: ["efeeeeee"], state: "UP" },
+  { name: "efeeeeee", dependants: [] },
+  { name: "11eeeeee", dependants: ["22eeeeee"] },
+  { name: "22eeeeee", dependants: [] },
+];
+
+function processGraph(graph: Action[], setNodes: any, setEdges: any) {
+  const nodes: Node[] = [];
+  const edges: Edge[] = [];
+
+  graph.forEach((node) => {
+    let additionalClasses = "";
+
+    switch (node.state) {
+      case "SUCCESSFUL":
+        additionalClasses = "bg-green-500 text-white";
+        break;
+      case "UP":
+        additionalClasses = "animate-pulse text-white bg-blue-700";
+        break;
+      case "WAITING":
+        additionalClasses = "bg-white text-slate-300";
+        break;
+      default:
+        additionalClasses = "";
+    }
+
+    nodes.push({
+      id: node.name,
+      type: "pncNode",
+      position: { x: 0, y: 0 },
+      data: {
+        name: node.name,
+        url: `${configData.pnc_base_url}/${node.name}`,
+        additional_classes: additionalClasses,
+      },
+      width: 150,
+      height: 42,
+    });
+
+    node.dependants.forEach((connection) => {
+      edges.push({
+        id: `${node.name}-${connection}`,
+        source: node.name,
+        target: connection,
+        animated: true,
+      });
+    });
+  });
+
+  // initial layout
+  const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+    nodes,
+    edges,
+    { direction: "TB" },
+  );
+
+  setNodes([...layoutedNodes]);
+  setEdges([...layoutedEdges]);
+}
+
+function LayoutFlow() {
+  const { fitView } = useReactFlow();
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  // "http://<server>/rest/tasks",
+  useEffect(() => {
+    fetch(
+      "/rest/tasks",
+    )
+      .then((response) => response.json())
+      .then((data) => processGraph(data, setNodes, setEdges))
+      .catch((error) => console.error(error));
+  }, [setNodes, setEdges]);
+
+  const onLayout = useCallback(
+    (direction: string) => {
+      const layouted = getLayoutedElements(nodes, edges, { direction });
+
+      setNodes([...layouted.nodes]);
+      setEdges([...layouted.edges]);
+
+      window.requestAnimationFrame(() => {
+        fitView();
+      });
+    },
+    [nodes, edges, setNodes, setEdges, fitView],
+  );
+
+  return (
+    <div style={{ width: "100vw", height: "100vh" }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        nodeTypes={nodeTypes}
+        fitView
+      >
+        <Panel position="top-right">
+          <button type="button" onClick={() => onLayout("TB")}>vertical layout</button>
+          <button type="button" onClick={() => onLayout("LR")}>horizontal layout</button>
+        </Panel>
+      </ReactFlow>
+    </div>
+  );
+};
+
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore the Next.js 13 playground.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+    <ReactFlowProvider>
+      <LayoutFlow />
+    </ReactFlowProvider>
+  );
 }
