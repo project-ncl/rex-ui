@@ -10,9 +10,7 @@ type Data = {
 function PncNode({ data }: NodeProps<Data>) {
   return (
     <div
-      className={
-        `px-4 py-2 shadow-md rounded-md border-2 border-stone-400 ${data.additional_classes}`
-      }
+      className={`px-4 py-2 shadow-md rounded-md border-2 border-stone-400 ${data.additional_classes}`}
     >
       <div className="flex">
         <div className="ml-2">

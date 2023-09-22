@@ -5,6 +5,9 @@ This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next
 First, run the development server:
 
 ```bash
+export NEXT_PUBLIC_PNC_URL=http://<something>
+export NEXT_PUBLIC_REX_URL=http://<something>
+
 npm run dev
 # or
 yarn dev
@@ -21,6 +24,16 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+
+# Build
+
+```
+export NEXT_PUBLIC_PNC_URL=http://<something>
+export NEXT_PUBLIC_REX_URL=http://<something>
+npm run build
+```
+
+The result is in the dist folder that you can then run in a static HTTP server.
 
 ## Learn More
 

@@ -18,8 +18,6 @@ import "reactflow/dist/style.css";
 
 import PncNode from "./pnc_node";
 
-import configData from "./config.json";
-
 type Action = {
   name: string;
   dependants: string[];
@@ -91,7 +89,7 @@ function processGraph(graph: Action[], setNodes: any, setEdges: any) {
       position: { x: 0, y: 0 },
       data: {
         name: node.name,
-        url: `${configData.pnc_base_url}/${node.name}`,
+        url: `${process.env.NEXT_PUBLIC_PNC_BASE_URL}/pnc-web/#/builds/${node.name}`,
         additional_classes: additionalClasses,
       },
       width: 150,
@@ -126,9 +124,7 @@ function LayoutFlow() {
 
   // "http://<server>/rest/tasks",
   useEffect(() => {
-    fetch(
-      "/rest/tasks",
-    )
+    fetch(`${process.env.NEXT_PUBLIC_REX_URL}/rest/tasks`)
       .then((response) => response.json())
       .then((data) => processGraph(data, setNodes, setEdges))
       .catch((error) => console.error(error));
@@ -159,14 +155,17 @@ function LayoutFlow() {
         fitView
       >
         <Panel position="top-right">
-          <button type="button" onClick={() => onLayout("TB")}>vertical layout</button>
-          <button type="button" onClick={() => onLayout("LR")}>horizontal layout</button>
+          <button type="button" onClick={() => onLayout("TB")}>
+            vertical layout
+          </button>
+          <button type="button" onClick={() => onLayout("LR")}>
+            horizontal layout
+          </button>
         </Panel>
       </ReactFlow>
     </div>
   );
-};
-
+}
 
 export default function Home() {
   return (
