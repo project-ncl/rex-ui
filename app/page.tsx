@@ -188,7 +188,7 @@ function LayoutFlow() {
           </Panel>
         </ReactFlow>
       </div>
-      <div className="absolute bottom-0 left-0 h-32 w-64 ...">
+      <div className="absolute bottom-0 left-0">
         <table className="border border-collapse border-slate-400 table-auto">
           <thead>
             <tr>
