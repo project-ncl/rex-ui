@@ -2,7 +2,7 @@
 
 import Dagre from "dagre";
 
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import ReactFlow, {
   ReactFlowProvider,
   Panel,
@@ -62,11 +62,25 @@ const fakeData = [
   { name: "22eeeeee", dependants: [] },
 ];
 
-function processGraph(graph: Action[], setNodes: any, setEdges: any) {
+function processGraph(
+  graph: Action[],
+  setNodes: any,
+  setEdges: any,
+  setStats: any,
+) {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
+  const map = new Map();
+
   graph.forEach((node) => {
+    if (map.has(node.state)) {
+      const currentCount = map.get(node.state);
+      map.set(node.state, currentCount + 1);
+    } else {
+      map.set(node.state, 1);
+    }
+
     let additionalClasses = "";
 
     switch (node.state) {
@@ -78,6 +92,11 @@ function processGraph(graph: Action[], setNodes: any, setEdges: any) {
         break;
       case "WAITING":
         additionalClasses = "bg-white text-slate-300";
+        break;
+      case "FAILED":
+      case "START_FAILED":
+      case "STOP_FAILED":
+        additionalClasses = "bg-red-600 text-white";
         break;
       default:
         additionalClasses = "";
@@ -113,6 +132,9 @@ function processGraph(graph: Action[], setNodes: any, setEdges: any) {
     { direction: "TB" },
   );
 
+  // calculate all the items held in rex
+  map.set("Total", graph.length);
+  setStats(map);
   setNodes([...layoutedNodes]);
   setEdges([...layoutedEdges]);
 }
@@ -121,12 +143,13 @@ function LayoutFlow() {
   const { fitView } = useReactFlow();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [stats, setStats] = useState(new Map());
 
   // "http://<server>/rest/tasks",
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_REX_URL}/rest/tasks`)
       .then((response) => response.json())
-      .then((data) => processGraph(data, setNodes, setEdges))
+      .then((data) => processGraph(data, setNodes, setEdges, setStats))
       .catch((error) => console.error(error));
   }, [setNodes, setEdges]);
 
@@ -145,25 +168,47 @@ function LayoutFlow() {
   );
 
   return (
-    <div style={{ width: "100vw", height: "100vh" }}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        nodeTypes={nodeTypes}
-        fitView
-      >
-        <Panel position="top-right">
-          <button type="button" onClick={() => onLayout("TB")}>
-            vertical layout
-          </button>
-          <button type="button" onClick={() => onLayout("LR")}>
-            horizontal layout
-          </button>
-        </Panel>
-      </ReactFlow>
-    </div>
+    <>
+      <div style={{ width: "100vw", height: "100vh" }}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          nodeTypes={nodeTypes}
+          fitView
+        >
+          <Panel position="top-right">
+            <button type="button" onClick={() => onLayout("TB")}>
+              vertical layout
+            </button>
+            <button type="button" onClick={() => onLayout("LR")}>
+              horizontal layout
+            </button>
+          </Panel>
+        </ReactFlow>
+      </div>
+      <div className="absolute bottom-0 left-0 h-32 w-64 ...">
+        <table className="border border-collapse border-slate-400 table-auto">
+          <thead>
+            <tr>
+              <th className="border border-slate-300">State</th>
+              <th className="border border-slate-300">Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from(stats.keys()).map((item) => (
+              <tr key={item}>
+                <td className="border border-slate-300">{item}</td>
+                <td className="border border-slate-300 text-right">
+                  {stats.get(item)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
